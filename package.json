@@ -28,6 +28,9 @@
   "author": "戈德斯文 <mrgoehte0126@gmail.com>",
   "license": "MIT",
   "type": "module",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
   "keywords": [
     "deep",
     "clone",
