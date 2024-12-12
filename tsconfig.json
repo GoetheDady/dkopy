@@ -3,14 +3,15 @@
     "target": "es2015",
     "module": "esnext",
     "lib": ["es2015", "dom"],
-    "declaration": true,
-    "outDir": "dist",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "downlevelIteration": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "declaration": true,
+    "outDir": "dist",
+    "declarationDir": "dist",
   },
-  "include": ["src"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }
