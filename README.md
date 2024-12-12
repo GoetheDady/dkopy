@@ -1,5 +1,7 @@
 # kopy 🚀
 
+[English](./docs/README_en.md) | 简体中文
+
 一个超轻量级、性能卓越的 JavaScript 深浅克隆工具库。完美应对复杂对象克隆场景！
 
 ## ✨ 特性
@@ -101,7 +103,7 @@ const cloned = deepClone(complex);
 
 ## 📄 许可证
 
-MIT © 2023 [Your Name]
+MIT License © 2024-Present
 
 ---
 ⭐️ 如果这个项目对你有帮助，别忘了给它点个星！
