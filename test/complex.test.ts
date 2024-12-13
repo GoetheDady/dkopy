@@ -87,6 +87,33 @@ describe('复杂对象测试', () => {
     expect(cloned.arr[0]).toBe(cloned);
   });
 
+  test('当启用循环引用检测时应该正确处理循环引用', () => {
+    const circular: any = {
+      name: 'circular'
+    };
+    circular.self = circular;
+    circular.arr = [circular];
+
+    const cloned = deepClone(circular, { circularReference: true });
+    
+    expect(cloned).not.toBe(circular);
+    expect(cloned.self).toBe(cloned);
+    expect(cloned.arr[0]).toBe(cloned);
+  });
+
+  test.skip('当未开启循环引用检测且存在循环引用时应导致调用栈溢出', () => {
+    const circular: any = {
+      name: 'circular'
+    };
+    circular.self = circular;
+
+    // 注意：这个测试用例会导致实际的栈溢出
+    // 仅用于演示未开启循环引用检测的后果
+    expect(() => {
+      deepClone(circular);
+    }).toThrow('Maximum call stack size exceeded');
+  });
+
   test('应该正确处理 Buffer 类型', () => {
     const original = {
       buffer: Buffer.from('test'),

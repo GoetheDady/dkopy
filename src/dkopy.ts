@@ -25,19 +25,20 @@ function dkopy<T>(
   const { 
     deep: isDeep = false, 
     cache = new WeakMap(),
-    maxDepth = 20
+    maxDepth = 20,
+    circularReference = true
   } = options;
 
   // 快速路径：使用 isObject 进行类型检查
   if (!isObject(data)) return data;
 
   // 防止递归过深导致栈溢出
-  if (currentDepth > maxDepth) {
+  if (currentDepth >= maxDepth) {
     throw new MaxDepthExceededError(currentDepth, maxDepth);
   }
 
-  // 处理循环引用：如果对象已经被克隆过，直接返回缓存的结果
-  if (cache.has(data)) {
+  // 只在启用循环引用检测时才使用缓存
+  if (circularReference && cache.has(data)) {
     return cache.get(data);
   }
 
@@ -46,8 +47,10 @@ function dkopy<T>(
   // 优先处理数组类型（最常见的复杂类型之一）
   if (isArray(data)) {
     result = [];
-    // 重要：在递归克隆前先缓存结果，防止循环引用
-    cache.set(data, result);
+    // 只在启用循环引用检测时才设置缓存
+    if (circularReference) {
+      cache.set(data, result);
+    }
     
     if (isDeep) {
       // 性能优化：使用 for 循环代替 map
@@ -65,7 +68,9 @@ function dkopy<T>(
   // 处理普通对象（第二常见的复杂类型）
   if (Object.prototype.toString.call(data) === '[object Object]') {
     result = {};
-    cache.set(data, result);
+    if (circularReference) {
+      cache.set(data, result);
+    }
     
     if (isDeep) {
       // 使用 for...in 遍历所有可枚举属性，包括原型链上的
@@ -120,8 +125,10 @@ function dkopy<T>(
     result = data;
   }
 
-  // 存入缓存以处理循环引用
-  cache.set(data, result);
+  // 只在启用循环引用检测时才设置缓存
+  if (circularReference) {
+    cache.set(data, result);
+  }
   return result as T;
 }
 
