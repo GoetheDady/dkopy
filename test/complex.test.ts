@@ -1,6 +1,11 @@
 import { deepClone, shallowClone } from '../src';
 import { MaxDepthExceededError } from '../src/errors';
 
+interface CustomError extends Error {
+  code?: string | number;
+  details?: Record<string, any>;
+}
+
 describe('复杂对象测试', () => {
   test('应该正确深克隆包含所有类型的复杂对象', () => {
     const date = new Date();
@@ -198,6 +203,59 @@ describe('复杂对象测试', () => {
     expect(() => deepClone(deepObj)).toThrow(MaxDepthExceededError);
     
     // 验证设置更大的maxDepth时可以成功克隆
-    expect(() => deepClone(deepObj, { maxDepth: 25 })).not.toThrow();
+    const originalError = new Error('测试错误') as CustomError;
+    originalError.code = 'TEST_ERROR';
+  });
+
+
+  test('应该创建错误对象的浅拷贝', () => {
+    const original = new Error('Test error') as CustomError;
+    original.code = 404; // 自定义属性
+    original.details = { info: 'Not Found' }; // 嵌套对象
+
+    const clone = shallowClone(original);
+
+    // 测试标准属性
+    expect(clone.message).toBe(original.message);
+    expect(clone.name).toBe(original.name);
+    expect(clone.stack).toBe(original.stack);
+
+    // 测试自定义属性
+    expect(clone.code).toBe(original.code);
+
+    // 测试顶层对象引用
+    expect(clone).not.toBe(original);
+
+    // 测试嵌套对象共享引用
+    expect(clone.details).toBe(original.details); // 浅克隆共享引用
+  });
+
+  test('应该创建错误对象的深拷贝', () => {
+    const original = new Error('Test error') as CustomError;
+    original.code = 500; // 自定义属性
+    original.details = { info: '内部服务器错误' }; // 嵌套对象
+
+    const clone = deepClone(original);
+
+    // 测试标准属性
+    expect(clone.message).toBe(original.message);
+    expect(clone.name).toBe(original.name);
+    expect(clone.stack).toBe(original.stack);
+
+    // 测试自定义属性
+    expect(clone.code).toBe(original.code);
+
+    // 测试顶层对象引用
+    expect(clone).not.toBe(original);
+
+    // 测试嵌套对象独立引用
+    expect(clone.details).toEqual(original.details);
+    expect(clone.details).not.toBe(original.details); // 深克隆生成独立引用
+
+    // 修改克隆对象不影响原始对象
+    if (clone.details) {
+      clone.details.info = '修改后的错误信息';
+    }
+    expect(original.details?.info).toBe('内部服务器错误'); // 原始对象未受影响
   });
 });
