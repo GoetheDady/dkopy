@@ -2,9 +2,13 @@
   "name": "dkopy",
   "version": "0.0.3",
   "description": "A library for deep cloning objects",
-  "main": "dist/index.js",
-  "module": "dist/index.esm.js",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    "import": "./dist/index.js",
+    "require": "./dist/index.cjs"
+  },
   "files": [
     "dist",
     "README.md"
@@ -15,7 +19,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "prepare": "npm run build",
-    "prepublishOnly": "npm test"
+    "prepublishOnly": "npm test",
+    "benchmark": "node benchmark/index.js"
   },
   "repository": {
     "type": "git",
@@ -55,6 +60,8 @@
     "rollup-plugin-typescript2": "^0.36.0",
     "ts-jest": "^29.1.1",
     "tslib": "^2.6.2",
-    "typescript": "^5.3.2"
+    "typescript": "^5.3.2",
+    "benchmark": "^2.1.4",
+    "lodash-es": "^4.17.21"
   }
 }
