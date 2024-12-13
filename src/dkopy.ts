@@ -1,8 +1,10 @@
 import { dkopyOptions } from './types';
 import { 
   isObject, isArray, isDate, isRegExp, 
-  isSet, isMap, isBuffer, isTypedArray 
+  isSet, isMap, isBuffer, isTypedArray,
+  isWeakMap, isWeakSet, isSymbol, isErrorObject
 } from './utils';
+import { shallowCloneErrorObject, deepCloneErrorObject } from './utils/clone'
 import { MaxDepthExceededError } from './errors';
 
 /**
@@ -92,37 +94,50 @@ function dkopy<T>(
   }
 
   // 处理特殊内置对象类型
-  if (isDate(data)) {
-    // Date对象需要创建新实例以隔离引用
-    result = isDeep ? new Date((data as Date).getTime()) : data;
-  } else if (isRegExp(data)) {
-    // RegExp对象克隆需保留原始的source和flags
-    result = isDeep ? new RegExp((data as RegExp).source, (data as RegExp).flags) : data;
-  } else if (isSet(data)) {
-    // Set对象需要克隆其中的每个元素
-    const set = data as Set<any>;
-    result = isDeep
-      ? new Set([...set].map(item => 
-          dkopy(item, { deep: isDeep, cache, maxDepth }, currentDepth + 1)))
-      : new Set([...set]);
-  } else if (isMap(data)) {
-    // Map对象需要同时克隆键和值
-    const map = data as Map<any, any>;
-    result = isDeep
-      ? new Map([...map].map(([k, v]) => [
-          dkopy(k, { deep: isDeep, cache, maxDepth }, currentDepth + 1),
-          dkopy(v, { deep: isDeep, cache, maxDepth }, currentDepth + 1)
-        ]))
-      : new Map([...map]);
-  } else if (isTypedArray(data)) {
-    // TypedArray 需要创建相同类型的新实例
-    result = isDeep ? new ((data as unknown as { constructor: new (arr: any) => any }).constructor)(data) : data;
-  } else if (isBuffer(data)) {
-    // Buffer 需要创建新的内存空间
-    result = isDeep ? Buffer.from(data as Buffer) : data;
-  } else {
-    // 其他未知类型对象，直接返回原始值
-    result = data;
+  switch (true) {
+    case isDate(data):
+      result = isDeep ? new Date((data as Date).getTime()) : data;
+      break;
+      
+    case isRegExp(data):
+      result = isDeep ? new RegExp((data as RegExp).source, (data as RegExp).flags) : data;
+      break;
+      
+    case isSet(data):
+      const set = data as Set<any>;
+      result = isDeep
+        ? new Set([...set].map(item => 
+            dkopy(item, { deep: isDeep, cache, maxDepth }, currentDepth + 1)))
+        : new Set([...set]);
+      break;
+      
+    case isMap(data):
+      const map = data as Map<any, any>;
+      result = isDeep
+        ? new Map([...map].map(([k, v]) => [
+            dkopy(k, { deep: isDeep, cache, maxDepth }, currentDepth + 1),
+            dkopy(v, { deep: isDeep, cache, maxDepth }, currentDepth + 1)
+          ]))
+        : new Map([...map]);
+      break;
+      
+    case isTypedArray(data):
+      result = isDeep ? new ((data as unknown as { constructor: new (arr: any) => any }).constructor)(data) : data;
+      break;
+      
+    case isBuffer(data):
+      result = isDeep ? Buffer.from(data as Buffer) : data;
+      break;
+
+    case isErrorObject(data):
+      const error = data as Error;
+      result = isDeep ? deepCloneErrorObject(error) : shallowCloneErrorObject(error);
+      break;
+
+    case isWeakMap(data) || isWeakSet(data):
+    case isSymbol(data):
+    default:
+      result = data;
   }
 
   // 只在启用循环引用检测时才设置缓存

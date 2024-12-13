@@ -215,3 +215,68 @@ export function isDomNode(val: any): val is HTMLDivElement {
 export function isTypedArray(val: any): boolean {
   return ArrayBuffer.isView(val) && !(val instanceof DataView);
 }
+
+
+/**
+ * 判断一个值是否为 WeakMap 类型
+ * @param val - 需要判断的值
+ * @returns {boolean} 如果是 WeakMap 类型返回 true，否则返回 false
+ * 
+ * @example
+ * ```ts
+ * const map = new WeakMap();
+ * isWeakMap(map); // true
+ * isWeakMap({}); // false
+ * ```
+ */
+export function isWeakMap(val: any): val is WeakMap<any, any> {
+  return typeof WeakMap !== 'undefined' && val instanceof WeakMap && Object.prototype.toString.call(val) === '[object WeakMap]';
+}
+
+/**
+ * 判断一个值是否为 WeakSet 类型
+ * @param val - 需要判断的值
+ * @returns {boolean} 如果是 WeakSet 类型返回 true，否则返回 false
+ * 
+ * @example
+ * ```ts
+ * const set = new WeakSet();
+ * isWeakSet(set); // true
+ * isWeakSet({}); // false
+ * ```
+ */
+export function isWeakSet(val: any): val is WeakSet<any> {
+  return typeof WeakSet !== 'undefined' && val instanceof WeakSet && Object.prototype.toString.call(val) === '[object WeakSet]';
+}
+
+/**
+ * 判断一个值是否为 Symbol 类型
+ * @param val - 需要判断的值
+ * @returns {boolean} 如果是 Symbol 类型返回 true，否则返回 false
+ * 
+ * @example
+ * ```ts
+ * isSymbol(Symbol('test')); // true
+ * isSymbol('test'); // false
+ * ```
+ */
+export function isSymbol(val: any): val is Symbol {
+  return typeof val === 'symbol';
+}
+
+
+/**
+ * 检查给定值是否为 Error 对象
+ * 
+ * @param val - 要检查的任意类型值
+ * @returns 如果值是 Error 对象则返回 true，否则返回 false
+ * 
+ * @example
+ * ```typescript
+ * isErrorObject(new Error()); // true
+ * isErrorObject('some string'); // false
+ * ```
+ */
+export function isErrorObject(val: any): val is Error {
+  return val instanceof Error;
+}
