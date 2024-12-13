@@ -2,9 +2,10 @@ import { dkopyOptions } from './types';
 import { 
   isObject, isArray, isDate, isRegExp, 
   isSet, isMap, isBuffer, isTypedArray,
-  isWeakMap, isWeakSet, isSymbol, isErrorObject
+  isWeakMap, isWeakSet, isSymbol, isErrorObject,
+  isPromise
 } from './utils';
-import { shallowCloneErrorObject, deepCloneErrorObject } from './utils/clone'
+import { shallowCloneErrorObject, deepCloneErrorObject, deepClonePromise } from './utils/clone'
 import { MaxDepthExceededError } from './errors';
 
 /**
@@ -132,6 +133,10 @@ function dkopy<T>(
     case isErrorObject(data):
       const error = data as Error;
       result = isDeep ? deepCloneErrorObject(error) : shallowCloneErrorObject(error);
+      break;
+    
+    case isPromise(data):
+      result = isDeep ? deepClonePromise(data) : data;
       break;
 
     case isWeakMap(data) || isWeakSet(data):

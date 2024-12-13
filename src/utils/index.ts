@@ -280,3 +280,19 @@ export function isSymbol(val: any): val is Symbol {
 export function isErrorObject(val: any): val is Error {
   return val instanceof Error;
 }
+
+/**
+ * 检查给定值是否为 Promise 对象
+ * 
+ * @param val - 要检查的值
+ * @returns 如果值是 Promise 对象则返回 true，否则返回 false
+ * 
+ * @example
+ * ```ts
+ * isPromise(Promise.resolve()); // true
+ * isPromise({ then: () => {} }); // false
+ * ```
+ */
+export function isPromise(val: any): val is Promise<any> {
+  return val instanceof Promise;
+}
