@@ -68,32 +68,6 @@ function dkopy<T>(
     return result as T;
   }
 
-  // 处理普通对象（第二常见的复杂类型）
-  if (Object.prototype.toString.call(data) === '[object Object]') {
-    result = {};
-    if (circularReference) {
-      cache.set(data, result);
-    }
-    
-    if (isDeep) {
-      // 使用 for...in 遍历所有可枚举属性，包括原型链上的
-      for (const key in data) {
-        // 只克隆对象自身的属性，排除原型链上的属性
-        if (Object.prototype.hasOwnProperty.call(data, key)) {
-          result[key] = dkopy(
-            (data as any)[key],
-            { deep: isDeep, cache, maxDepth },
-            currentDepth + 1
-          );
-        }
-      }
-    } else {
-      // 浅克隆直接复制所有属性
-      Object.assign(result, data);
-    }
-    return result as T;
-  }
-
   // 处理特殊内置对象类型
   switch (true) {
     case isDate(data):
@@ -141,8 +115,33 @@ function dkopy<T>(
 
     case isWeakMap(data) || isWeakSet(data):
     case isSymbol(data):
-    default:
       result = data;
+      break;
+
+    default:
+      // 处理普通对象（如果不是以上任何特殊类型）
+      if (Object.prototype.toString.call(data) === '[object Object]') {
+        result = {};
+        if (circularReference) {
+          cache.set(data, result);
+        }
+        
+        if (isDeep) {
+          for (const key in data) {
+            if (Object.prototype.hasOwnProperty.call(data, key)) {
+              result[key] = dkopy(
+                (data as any)[key],
+                { deep: isDeep, cache, maxDepth },
+                currentDepth + 1
+              );
+            }
+          }
+        } else {
+          Object.assign(result, data);
+        }
+      } else {
+        result = data;
+      }
   }
 
   // 只在启用循环引用检测时才设置缓存
