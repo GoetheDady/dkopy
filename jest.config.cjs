@@ -6,4 +6,6 @@ module.exports = {
   transform: {
     '^.+\\.ts$': 'ts-jest',
   },
+  watchAll: false,
+  watch: false
 };

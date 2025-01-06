@@ -2,18 +2,17 @@
 
 [English](./docs/README_en.md) | 简体中文
 
-一个超轻量级、性能卓越的 JavaScript 深浅克隆工具库。完美应对复杂对象克隆场景！
+一个超轻量级、高性能的 JavaScript 深克隆工具库，完美支持复杂对象和循环引用的克隆场景！
 
 ## ✨ 特性
 
-- 🚀 极致性能 - 优化的克隆算法
-- 🛡️ 类型安全 - 完整的 TypeScript 支持
-- 🔄 深浅克隆 - 灵活的克隆策略
-- 🎯 循环检测 - 智能处理循环引用
-- 🎨 全类型支持 - 支持所有 JavaScript 数据类型
-- 🧰 零依赖 - 无外部依赖的纯净实现
-- 📦 体积小巧 - 压缩后仅 ~2KB
-- 🔒 安全可靠 - 防止递归栈溢出
+- 🚀 **极致性能** - 优化的克隆算法，性能远超同类工具。
+- 🛡️ **类型安全** - 完整的 TypeScript 支持，提供类型推断和代码提示。
+- 🔄 **循环引用检测** - 智能处理循环引用，避免栈溢出。
+- 🎨 **全类型支持** - 支持所有 JavaScript 数据类型，包括 `Date`、`RegExp`、`Set`、`Map`、`TypedArray` 等。
+- 🧰 **零依赖** - 无外部依赖，纯净实现。
+- 📦 **体积小巧** - 压缩后仅 ~2KB。
+- 🔒 **安全可靠** - 防止递归栈溢出，支持最大递归深度配置。
 
 ## 📦 安装
 
@@ -31,51 +30,37 @@ pnpm add dkopy
 ## 🚀 快速开始
 
 ```js
-import { deepClone, shallowClone } from 'dkopy';
+import dkopy from 'dkopy';
 
-// 1️⃣ 基础浅克隆
-const clone = shallowClone(source);
+// 1️⃣ 基础深克隆
+const cloned = dkopy(source);
 
-// 2️⃣ 深度克隆
-const deepCloned = deepClone(source);
-
-// 3️⃣ 自定义配置
-const safeClone = deepClone(source, { 
-  maxDepth: 100  // 设置最大递归深度
-});
-
-// 4️⃣ 处理循环引用
+// 2️⃣ 处理循环引用
 const circular = { foo: { bar: {} } };
 circular.foo.bar = circular;
-const cloned = deepClone(circular); // ✅ 正确处理循环引用
+const cloned = dkopy(circular); // ✅ 正确处理循环引用
 ```
 
 ## 🎯 支持的数据类型
 
 - 💫 基础类型
-  - ✅ String、Number、Boolean
-  - ✅ null、undefined
-  - ✅ Symbol、BigInt
+  - ✅ `String`、`Number`、`Boolean`
+  - ✅ `null`、`undefined`
 - 📋 引用类型
-  - ✅ Object、Array
-  - ✅ Date、RegExp
-  - ✅ Map、Set、WeakMap、WeakSet
-  - ✅ TypedArray（Int8Array 等）
-  - ✅ ArrayBuffer、SharedArrayBuffer
-  - ✅ Buffer（Node.js）
-  - ✅ 函数引用
+  - ✅ `Object`、`Array`
+  - ✅ `Date`、`RegExp`
+  - ✅ `Map`、`Set`
+  - ✅ `TypedArray`（如 `Uint8Array`、`Int32Array` 等）
+  - ✅ `ArrayBuffer`
 
 ## 🛠️ API
 
 ```ts
-interface CloneOptions {
-  maxDepth?: number;   // 最大递归深度，默认 20
-  cache?: WeakMap;     // 循环引用缓存
-}
-
-deepClone<T>(data: T, options?: CloneOptions): T
-shallowClone<T>(data: T): T
+function dkopy<T>(input: T, clonedMap?: Map<any, any>): T;
 ```
+
+* `input`: 需要克隆的值。
+* `clonedMap`: 用于记录已克隆对象的 Map（内部使用，通常无需手动传递）。
 
 ## 🎮 使用示例
 
@@ -90,7 +75,7 @@ const complex = {
   nested: { deep: { deeper: { value: 42 } } }
 };
 
-const cloned = deepClone(complex);
+const cloned = dkopy(complex);
 // ✅ 所有属性都被正确克隆！
 ```
 
@@ -100,40 +85,16 @@ const cloned = deepClone(complex);
 
 ```
 深克隆性能测试:
-✨ dkopy.deepClone-基础类型:   5,562,015 ops/sec
-✨ dkopy.deepClone-小型对象:   7,233,195 ops/sec  🏆
-✨ dkopy.deepClone-中型对象:     831,033 ops/sec
-✨ dkopy.deepClone-深度嵌套:   1,127,315 ops/sec
-
-对比 lodash:
-📊 lodash.cloneDeep-基础类型: 2,638,182 ops/sec
-📊 lodash.cloneDeep-小型对象: 3,373,687 ops/sec
-📊 lodash.cloneDeep-中型对象:    31,078 ops/sec
-📊 lodash.cloneDeep-深度嵌套:   384,587 ops/sec
+✨ dkopy: 681,261 ops/sec ±0.25% (94 runs sampled)
+📊 lodash.cloneDeep: 254,535 ops/sec ±0.24% (94 runs sampled)
+🚀 rfdc: 745,473 ops/sec ±0.31% (99 runs sampled)
 ```
 
 ## 📈 性能优势
 
-- 🚀 基础类型克隆比 lodash 快 110%
-- ⚡️ 小型对象克隆比 lodash 快 114%
-- 🎯 中型对象克隆效率提升 2576%
-- 💫 深度嵌套对象克隆快 193%
-- 🔥 特殊类型克隆性能提升 6326%
-
-## 🎯 高级使用
-
-```ts
-// 自定义克隆深度
-const cloned = deepClone(data, { maxDepth: 50 });
-
-// 禁用循环引用检测以提升性能
-const faster = deepClone(data, { circularReference: false });
-
-// 使用自定义缓存
-const cache = new WeakMap();
-const clone1 = deepClone(data, { cache });
-const clone2 = deepClone(data, { cache }); // 复用缓存
-```
+* `dkopy` 的性能是 `lodash.cloneDeep` 的 2.68 倍。
+* `dkopy` 的性能接近 `rfdc`，仅相差约 8.6%。
+* `dkopy` 在大多数场景下表现优异，尤其是在处理复杂对象和循环引用时。
 
 ## 🤝 贡献指南
 
@@ -142,13 +103,6 @@ const clone2 = deepClone(data, { cache }); // 复用缓存
 3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 创建 Pull Request
-
-## 🔍 注意事项
-
-- ⚠️ 默认最大递归深度为 20 层
-- 💡 建议根据数据结构合理设置 maxDepth
-- 🚫 不支持克隆 DOM 节点
-- 📝 函数属性会保持引用
 
 ## 📄 许可证
 
