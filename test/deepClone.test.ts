@@ -144,37 +144,42 @@ describe('深克隆测试', () => {
       [Symbol('test'), new Date()],   // Symbol 键和 Date 值
       [new Map(), new Set()]          // Map 键和 Set 值
     ]);
-  
+
     const cloned = dkopy(map);
-  
+
     // 测试克隆后的 Map 对象与原对象值相等
     expect(cloned).toEqual(map);
     expect(cloned).not.toBe(map);
-  
+
     // 测试嵌套对象的独立性
     map.forEach((value, key) => {
+      // 确保克隆后的 Map 包含相同的键值对
+      expect(cloned.has(key)).toBe(true);
       expect(cloned.get(key)).toEqual(value);
+
+      // 如果值是对象，确保克隆后的值与原值不是同一个引用
       if (typeof value === 'object' && value !== null) {
         expect(cloned.get(key)).not.toBe(value);
       }
     });
-  
+
     // 测试修改克隆对象不影响原对象
     const nestedObjectKey = Array.from(cloned.keys()).find(key => typeof key === 'object' && key !== null);
     if (nestedObjectKey) {
       (cloned.get(nestedObjectKey) as any).push(4); // 修改克隆对象的数组值
       expect(map.get(nestedObjectKey)).toEqual([1, 2, 3]); // 原对象不受影响
     }
-  
+
     // 测试空 Map
     const emptyMap = new Map();
     const clonedEmptyMap = dkopy(emptyMap);
     expect(clonedEmptyMap).toEqual(emptyMap);
     expect(clonedEmptyMap).not.toBe(emptyMap);
-  
+
     // 测试 Map 的键值对数量是否一致
     expect(cloned.size).toBe(map.size);
   });
+
   
 
   test('Set 测试', () => {

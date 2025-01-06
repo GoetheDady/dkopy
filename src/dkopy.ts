@@ -34,8 +34,11 @@ const CONSTRUCTOR_HANDLERS = new Map<string, (input: any, clone: Function) => an
   // 处理 Map 类型
   ['[object Map]', (input, clone) => {
     const result = new Map();
-    for (const [key, value] of input) {
-      result.set(clone(key), clone(value)); // 递归克隆 Map 中的键和值
+    for (let [key, value] of input) {
+      if (value && typeof value === 'object') {
+        value = clone(value); // 递归克隆 Map 中的每个值
+      }
+      result.set(key, value);
     }
     return result;
   }],
