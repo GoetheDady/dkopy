@@ -15,7 +15,9 @@ jobs:
           registry-url: https://registry.npmjs.org/
           cache: 'npm'
       - name: Clean install
-        run: npm ci
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
       - name: Add Npm Token
         run: |
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_PUBLISH }}" >> ./.npmrc

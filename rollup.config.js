@@ -1,4 +1,4 @@
-import typescript from 'rollup-plugin-typescript2';
+import typescript from '@rollup/plugin-typescript';
 import terser from '@rollup/plugin-terser';
 
 export default {
@@ -15,18 +15,7 @@ export default {
     },
   ],
   plugins: [
-    typescript({
-      useTsconfigDeclarationDir: true,
-      tsconfigOverride: {
-        compilerOptions: {
-          module: 'esnext', // 使用 ES 模块
-          declaration: true, // 生成类型声明文件
-          declarationDir: 'dist', // 类型声明文件输出目录
-          outDir: 'dist', // 输出目录
-        },
-      },
-      tsconfig: './tsconfig.build.json', // 只含 src，保证声明文件平铺在 dist/ 下
-    }),
+    typescript({ tsconfig: './tsconfig.build.json' }), // 只含 src，保证声明文件平铺在 dist/ 下
     terser({
       format: {
         comments: false, // 移除所有注释
