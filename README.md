@@ -6,13 +6,14 @@
 
 ## ✨ 特性
 
-- 🚀 **极致性能** - 优化的克隆算法，性能远超同类工具。
+- 🚀 **极致性能** - 优化的克隆算法，性能远超 `lodash.cloneDeep`。
 - 🛡️ **类型安全** - 完整的 TypeScript 支持，提供类型推断和代码提示。
-- 🔄 **循环引用检测** - 智能处理循环引用，避免栈溢出。
-- 🎨 **全类型支持** - 支持所有 JavaScript 数据类型，包括 `Date`、`RegExp`、`Set`、`Map`、`TypedArray` 等。
+- 🔄 **循环引用检测** - 智能处理循环引用与 `Set`/`Map` 自引用，避免栈溢出。
+- 🎨 **全类型支持** - 支持所有 JavaScript 数据类型，包括 `Date`、`RegExp`、`Set`、`Map`、`TypedArray`、`DataView` 等。
+- 🧬 **原型保留** - 类实例克隆后保留原型链，方法依然可用。
+- 🔑 **Symbol 键** - 对象的可枚举 `Symbol` 属性一并深克隆，`Map` 的键也会克隆。
 - 🧰 **零依赖** - 无外部依赖，纯净实现。
-- 📦 **体积小巧** - 压缩后仅 ~2KB。
-- 🔒 **安全可靠** - 防止递归栈溢出，支持最大递归深度配置。
+- 📦 **体积小巧** - 压缩后仅 ~1KB。
 
 ## 📦 安装
 
@@ -49,9 +50,11 @@ const cloned = dkopy(circular); // ✅ 正确处理循环引用
 - 📋 引用类型
   - ✅ `Object`、`Array`
   - ✅ `Date`、`RegExp`
-  - ✅ `Map`、`Set`
-  - ✅ `TypedArray`（如 `Uint8Array`、`Int32Array` 等）
+  - ✅ `Map`、`Set`（键和值都会克隆）
+  - ✅ `TypedArray`（如 `Uint8Array`、`Int32Array` 等）、`DataView`
   - ✅ `ArrayBuffer`
+  - ✅ 类实例（保留原型链，方法可用）
+  - ✅ 对象的可枚举 `Symbol` 键
 
 ## 🛠️ API
 
@@ -77,24 +80,41 @@ const complex = {
 
 const cloned = dkopy(complex);
 // ✅ 所有属性都被正确克隆！
+
+// 类实例保留原型
+class User {
+  greet() { return 'hi'; }
+}
+dkopy(new User()).greet(); // ✅ 方法依然可用
 ```
 
 ## ⚡️ 性能测试
 
-使用 [benchmark.js](https://benchmarkjs.com/) 在不同场景下的测试结果:
+使用 [benchmark.js](https://benchmarkjs.com/) 在复杂对象（含循环引用）场景下的测试结果（`node benchmark/index.js`）：
 
 ```
 深克隆性能测试:
-✨ dkopy: 681,261 ops/sec ±0.25% (94 runs sampled)
-📊 lodash.cloneDeep: 254,535 ops/sec ±0.24% (94 runs sampled)
-🚀 rfdc: 745,473 ops/sec ±0.31% (99 runs sampled)
+✨ dkopy: 944,277 ops/sec
+📊 lodash.cloneDeep: 380,269 ops/sec
+🚀 rfdc: 1,041,425 ops/sec
 ```
+
+多场景对比（Node 24，rfdc 开启 `circles` 对齐）：
+
+| 场景 | dkopy | lodash.cloneDeep | rfdc |
+| --- | --- | --- | --- |
+| 原始类型 | ✅ 50.3M ops/sec | 46.3M | 49.8M |
+| 小对象（3 键平铺） | 9.4M | 4.3M | ✅ 20.7M |
+| 大数组（1 万个数字） | ✅ 23.5k | 3.0k | 9.6k |
+| 深嵌套（10 层） | 1.19M | 0.52M | ✅ 3.39M |
+| 特殊类型混合 | ✅ 1.52M | 0.36M | 1.44M |
+| 复杂对象+循环引用 | 1.25M | 0.36M | ✅ 1.26M |
 
 ## 📈 性能优势
 
-* `dkopy` 的性能是 `lodash.cloneDeep` 的 2.68 倍。
-* `dkopy` 的性能接近 `rfdc`，仅相差约 8.6%。
-* `dkopy` 在大多数场景下表现优异，尤其是在处理复杂对象和循环引用时。
+* 复杂对象场景下，`dkopy` 的性能是 `lodash.cloneDeep` 的约 2.5 倍。
+* `dkopy` 在数组、特殊类型（`Date`/`Map`/`Set`/`TypedArray`）和原始类型场景领先 `rfdc`，复杂对象+循环引用场景已与 `rfdc` 基本持平。
+* `dkopy` 附带 `rfdc` 不具备的能力：保留类实例原型、克隆 `Symbol` 键与 `Map` 键。
 
 ## 🤝 贡献指南
 

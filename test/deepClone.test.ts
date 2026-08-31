@@ -152,23 +152,33 @@ describe('深克隆测试', () => {
     expect(cloned).not.toBe(map);
 
     // 测试嵌套对象的独立性
-    map.forEach((value, key) => {
-      // 确保克隆后的 Map 包含相同的键值对
-      expect(cloned.has(key)).toBe(true);
-      expect(cloned.get(key)).toEqual(value);
+    // 对象键现在也会被克隆，无法用原键直接查找，改用插入顺序对齐（Map 保证有序）
+    const origEntries = Array.from(map.entries());
+    const clonedEntries = Array.from(cloned.entries());
+    origEntries.forEach(([key, value], i) => {
+      const [clonedKey, clonedValue] = clonedEntries[i];
+
+      // 对象键应结构相等且引用不同；原始类型键（含 Symbol）应完全相同
+      if (typeof key === 'object' && key !== null) {
+        expect(clonedKey).toEqual(key);
+        expect(clonedKey).not.toBe(key);
+      } else {
+        expect(clonedKey).toBe(key);
+      }
+
+      // 值应结构相等
+      expect(clonedValue).toEqual(value);
 
       // 如果值是对象，确保克隆后的值与原值不是同一个引用
       if (typeof value === 'object' && value !== null) {
-        expect(cloned.get(key)).not.toBe(value);
+        expect(clonedValue).not.toBe(value);
       }
     });
 
     // 测试修改克隆对象不影响原对象
-    const nestedObjectKey = Array.from(cloned.keys()).find(key => typeof key === 'object' && key !== null);
-    if (nestedObjectKey) {
-      (cloned.get(nestedObjectKey) as any).push(4); // 修改克隆对象的数组值
-      expect(map.get(nestedObjectKey)).toEqual([1, 2, 3]); // 原对象不受影响
-    }
+    const arrIdx = origEntries.findIndex(([, v]) => Array.isArray(v));
+    (clonedEntries[arrIdx][1] as any).push(4); // 修改克隆对象的数组值
+    expect(origEntries[arrIdx][1]).toEqual([1, 2, 3]); // 原对象不受影响
 
     // 测试空 Map
     const emptyMap = new Map();
@@ -402,4 +412,42 @@ describe('深克隆测试', () => {
   //     expect(cloned[key]).not.toBe(complex[key]);
   //   });
   // });
+
+  test('Set/Map 自引用测试', () => {
+    const s = new Set();
+    s.add(s);
+    const clonedSet = dkopy(s);
+    expect(clonedSet.has(clonedSet)).toBe(true);
+
+    const m = new Map();
+    m.set('self', m);
+    const clonedMap = dkopy(m);
+    expect(clonedMap.get('self')).toBe(clonedMap);
+  });
+
+  test('类实例原型保留测试', () => {
+    class Foo {
+      x = 1;
+      greet() {
+        return 'hi';
+      }
+    }
+    const cloned = dkopy(new Foo());
+    expect(cloned).toBeInstanceOf(Foo);
+    expect(cloned.greet()).toBe('hi');
+  });
+
+  test('Map 键克隆测试', () => {
+    const key = { id: 1 };
+    const cloned = dkopy(new Map([[key, 'v']]));
+    const clonedKey = [...cloned.keys()][0];
+    expect(clonedKey).not.toBe(key);
+    expect(clonedKey).toEqual(key);
+  });
+
+  test('Symbol 键测试', () => {
+    const sym = Symbol('s');
+    const cloned = dkopy({ [sym]: 1, a: 2 });
+    expect(cloned[sym]).toBe(1);
+  });
 });

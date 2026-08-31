@@ -15,30 +15,29 @@ function getType(value: any): string {
  * 使用 Map 存储不同类型（如 Date、RegExp、Set、Map）的克隆逻辑。
  * 每种类型对应一个处理函数，确保克隆后的对象与原对象行为一致。
  */
-const CONSTRUCTOR_HANDLERS = new Map<string, (input: any, clone: Function) => any>([
+const CONSTRUCTOR_HANDLERS = new Map<string, (input: any, clone: Function, map: Map<any, any>) => any>([
   // 处理 Date 类型
   ['[object Date]', (input) => new Date(input.getTime())], // 通过时间戳创建一个新的 Date 对象
 
   // 处理 RegExp 类型
   ['[object RegExp]', (input) => new RegExp(input.source, input.flags)], // 通过 source 和 flags 创建一个新的 RegExp 对象
 
-  // 处理 Set 类型
-  ['[object Set]', (input, clone) => {
+  // 处理 Set 类型：先注册克隆结果再递归填充，保证自引用（如 set.add(set)）安全
+  ['[object Set]', (input, clone, map) => {
     const result = new Set();
+    map.set(input, result);
     for (const value of input) {
       result.add(clone(value)); // 递归克隆 Set 中的每个元素
     }
     return result;
   }],
 
-  // 处理 Map 类型
-  ['[object Map]', (input, clone) => {
+  // 处理 Map 类型：键和值都递归克隆；先注册克隆结果再递归填充，保证自引用安全
+  ['[object Map]', (input, clone, map) => {
     const result = new Map();
-    for (let [key, value] of input) {
-      if (value && typeof value === 'object') {
-        value = clone(value); // 递归克隆 Map 中的每个值
-      }
-      result.set(key, value);
+    map.set(input, result);
+    for (const [key, value] of input) {
+      result.set(clone(key), clone(value)); // 递归克隆 Map 中的每个键值
     }
     return result;
   }],
@@ -52,90 +51,88 @@ const CONSTRUCTOR_HANDLERS = new Map<string, (input: any, clone: Function) => an
  * @param clonedMap - 用于记录已克隆对象的 Map（内部使用）
  * @returns {T} 克隆后的值
  */
-function dkopy<T>(input: T, clonedMap = new Map()): T {
-  // 处理基本类型（如 null、undefined、number、string、boolean）
-  if (shouldShallowCopy(input)) return input;
+function dkopy<T>(input: T, clonedMap?: Map<any, any>): T {
+  // 处理基本类型（如 null、undefined、number、string、boolean）及函数
+  if (input == null || (typeof input !== 'object' && typeof input !== 'function')) return input;
+
+  // 仅在遇到对象时才创建克隆缓存（原始类型零分配）
+  const map = clonedMap ?? new Map();
 
   // 如果当前对象已被克隆过，则直接返回克隆后的对象
   // 这是处理循环引用的关键逻辑，避免无限递归
-  if (clonedMap.has(input)) return clonedMap.get(input);
+  if (map.has(input)) return map.get(input);
+
+  // 快路径：数组是最常见类型之一，先用原生检测，免去 toString 派发
+  if (Array.isArray(input)) {
+    const result = new Array(input.length); // 预分配数组空间，避免动态扩容
+    map.set(input, result);
+    for (let i = 0; i < input.length; i++) {
+      result[i] = dkopy(input[i], map); // 递归克隆数组中的每个元素
+    }
+    return result as T;
+  }
+
+  // 处理 TypedArray 与 DataView（ArrayBuffer.isView 覆盖所有视图类型）
+  if (ArrayBuffer.isView(input)) {
+    const view = input as any;
+    const result = new view.constructor(
+      view.buffer.slice(), // 克隆底层的 ArrayBuffer
+      view.byteOffset, // 保持相同的字节偏移
+      view.length // 保持相同的长度
+    );
+    map.set(input, result);
+    return result;
+  }
+
+  // 快路径：普通对象（最常见类型），原型判断替代 toString 派发
+  const proto = Object.getPrototypeOf(input);
+  if (proto === Object.prototype || proto === null) {
+    const result: any = {};
+    map.set(input, result);
+    copyOwnProps(input, result, map);
+    return result;
+  }
 
   // 获取输入值的类型
   const type = getType(input);
 
-  // 查找特殊类型的处理器
+  // 特殊类型（Date、RegExp、Set、Map）派发给处理器
   const handler = CONSTRUCTOR_HANDLERS.get(type);
-
-  // 如果找到对应的处理器，则调用处理器进行克隆
   if (handler) {
-    const result = handler(input, (value: any) => dkopy(value, clonedMap)); // 递归调用 dkopy 处理嵌套值
-    clonedMap.set(input, result); // 将克隆结果缓存到 Map 中
-    return result;
-  }
-
-  // 处理数组
-  if (type === '[object Array]') {
-    const array = input as unknown[];
-    const result = new Array(array.length); // 预分配数组空间，避免动态扩容
-    clonedMap.set(input, result); // 将克隆结果缓存到 Map 中
-    for (let i = 0; i < array.length; i++) {
-      result[i] = dkopy(array[i], clonedMap); // 递归克隆数组中的每个元素
-    }
-    return result as T;
-  }
-
-  // 处理 TypedArray（如 Uint8Array、Float32Array 等）
-  if (type === '[object Uint8Array]' || type === '[object Uint16Array]' || type === '[object Uint32Array]' ||
-      type === '[object Int8Array]' || type === '[object Int16Array]' || type === '[object Int32Array]' ||
-      type === '[object Float32Array]' || type === '[object Float64Array]') {
-    const typedArray = input as any;
-    const result = new typedArray.constructor(
-      typedArray.buffer.slice(), // 克隆底层的 ArrayBuffer
-      typedArray.byteOffset, // 保持相同的字节偏移
-      typedArray.length // 保持相同的长度
-    );
-    clonedMap.set(input, result); // 将克隆结果缓存到 Map 中
-    return result;
+    return handler(input, (value: any) => dkopy(value, map), map);
   }
 
   // 处理 ArrayBuffer
   if (type === '[object ArrayBuffer]') {
-    const result = (input as ArrayBuffer).slice(0); // 克隆一个新的 ArrayBuffer
-    clonedMap.set(input, result); // 将克隆结果缓存到 Map 中
+    const result = (input as unknown as ArrayBuffer).slice(0); // 克隆一个新的 ArrayBuffer
+    map.set(input, result);
     return result as T;
   }
 
-  // 处理普通对象
+  // 处理类实例等保留原型的对象（Object.create 保留原型链）
   if (type === '[object Object]') {
-    const result: any = {};
-    clonedMap.set(input, result); // 将克隆结果缓存到 Map 中
-    const keys = Object.keys(input as object); // 获取对象的所有可枚举属性
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i];
-      result[key] = dkopy((input as Record<string, unknown>)[key], clonedMap); // 递归克隆对象的每个属性
-    }
+    const result: any = Object.create(proto);
+    map.set(input, result);
+    copyOwnProps(input, result, map);
     return result;
   }
 
-  // 默认返回输入值（适用于不支持的类型，如 Symbol、Function 等）
+  // 默认返回输入值（适用于不支持的类型，如 Promise、WeakMap、Function 等）
   return input;
 }
 
 /**
- * 判断给定的输入值是否应该进行浅拷贝。
- * 浅拷贝适用于基本类型和不可克隆的对象（如 Symbol、Function 等）。
- *
- * @param input - 要检查的值
- * @returns {boolean} 如果满足以下条件之一则返回 true：
- * - 输入值为 null 或 undefined
- * - 输入值为原始类型（如 number、string、boolean）
- * - 输入值是 SHALLOW_COPY_INSTANCES 中定义的类型实例
+ * 复制对象自身的可枚举属性（字符串键 + 可枚举 Symbol 键），值递归克隆。
  */
-function shouldShallowCopy(input: any): boolean {
-  if (input === null || input === undefined) return true; // null 和 undefined 直接返回
-  const type = typeof input;
-  if (type !== 'object' && type !== 'function') return true; // 原始类型直接返回
-  return false; // 其他类型需要进行深拷贝
+function copyOwnProps(src: any, result: any, map: Map<any, any>): void {
+  for (const key of Object.keys(src)) {
+    result[key] = dkopy(src[key], map); // 递归克隆字符串键属性
+  }
+  for (const sym of Object.getOwnPropertySymbols(src)) {
+    if (Object.prototype.propertyIsEnumerable.call(src, sym)) {
+      result[sym] = dkopy(src[sym], map); // 递归克隆可枚举 Symbol 键属性
+    }
+  }
 }
 
 export default dkopy;

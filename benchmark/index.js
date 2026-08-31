@@ -45,7 +45,7 @@ const suite = new Benchmark.Suite();
 
 // 添加测试用例
 suite
-  .add('dkopy', () => dkopy(createComplexObject(), { circles: true }))
+  .add('dkopy', () => dkopy(createComplexObject()))
   .add('lodash.cloneDeep', () => _.cloneDeep(createComplexObject()))
   .add('rfdc', () => rfdc({ circles: true })(createComplexObject()))
   .on('cycle', (event) => {

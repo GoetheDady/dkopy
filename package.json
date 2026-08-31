@@ -14,7 +14,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "rollup -c",
+    "build": "rm -rf dist && rollup -c",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -50,9 +50,6 @@
     "fast"
   ],
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^28.0.2",
-    "@rollup/plugin-json": "^6.1.0",
-    "@rollup/plugin-node-resolve": "^16.0.0",
     "@rollup/plugin-terser": "^0.4.4",
     "@types/jest": "^29.5.11",
     "@types/lodash": "^4.17.14",
@@ -64,7 +61,6 @@
     "lodash-es": "^4.17.21",
     "rfdc": "^1.4.1",
     "rollup": "^4.6.1",
-    "rollup-plugin-delete": "^2.1.0",
     "rollup-plugin-typescript2": "^0.36.0",
     "ts-jest": "^29.1.1",
     "tslib": "^2.6.2",
