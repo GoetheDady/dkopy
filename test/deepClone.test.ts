@@ -1,3 +1,4 @@
+import { describe, expect, test } from 'vitest';
 import dkopy from '../src/dkopy';
 
 describe('深克隆测试', () => {
