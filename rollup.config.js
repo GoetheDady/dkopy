@@ -25,7 +25,7 @@ export default {
           outDir: 'dist', // 输出目录
         },
       },
-      tsconfig: './tsconfig.json', // 指定 tsconfig 文件
+      tsconfig: './tsconfig.build.json', // 只含 src，保证声明文件平铺在 dist/ 下
     }),
     terser({
       format: {
