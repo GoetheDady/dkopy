@@ -11,7 +11,7 @@
 - 🔄 **循环引用检测** - 智能处理循环引用与 `Set`/`Map` 自引用，避免栈溢出。
 - 🎨 **内置类型** - 支持 `Date`、`RegExp`、`Set`、`Map` 和二进制数据等常用类型。
 - 🧬 **原型保留** - 普通类实例的副本仍可访问原型上的方法。
-- 🔑 **Symbol 键** - 对象的可枚举 `Symbol` 属性一并深克隆，`Map` 的键也会克隆。
+- 🔑 **Symbol 键** - 普通对象、数组和普通类实例自身的可枚举 `Symbol` 属性一并深克隆，`Map` 的键也会克隆。
 - 🧰 **零依赖** - 无外部依赖，纯净实现。
 
 ## 📦 安装
@@ -57,7 +57,8 @@ CommonJS（Node.js 中使用 `require` 加载模块的写法）：`const { dkopy
   - ✅ `TypedArray`（如 `Uint8Array`、`Int32Array` 等）、`DataView`
   - ✅ `ArrayBuffer`、`SharedArrayBuffer` 和 Node.js `Buffer`（二进制数据的存储或访问类型；共享同一块内存的视图在克隆后仍共享同一个副本）
   - ✅ 类实例（保留原型链，方法可用）
-  - ✅ 对象的可枚举 `Symbol` 键
+
+**属性复制规则：** 普通对象、数组和普通类实例都会复制自身可枚举的属性（可以被列出的属性，键可以是字符串或 `Symbol`），不把继承来的属性复制为自有属性。数组还会保留自有索引和空位，空位不会被填成 `undefined`。类实例的副本保留原型，但自己的属性不受原型上同名属性的限制。`Date`、`Map` 等内置对象的额外属性不在此范围内。
 
 **范围限制：** 函数、`Promise`、`WeakMap` 和 `Error` 等未支持的值会原样返回。克隆不会重建类的 `#` 私有字段或保留对象属性的完整配置；非常深的嵌套仍可能超出 JavaScript 的递归调用上限。
 
@@ -95,31 +96,17 @@ dkopy(new User()).greet(); // ✅ 方法依然可用
 
 ## ⚡️ 性能测试
 
-使用 [benchmark.js](https://benchmarkjs.com/) 在复杂对象（含循环引用）场景下的测试结果（`node benchmark/index.js`）：
+测试场景：克隆含循环引用的复杂对象。使用当前开发版本，运行 `npm run build && npm run benchmark` 可复测。
 
-```
-深克隆性能测试:
-✨ dkopy: 944,277 ops/sec
-📊 lodash.cloneDeep: 380,269 ops/sec
-🚀 rfdc: 1,041,425 ops/sec
-```
+**测试环境（2026-11-26）：** Apple M4（ARM64）、macOS 26.6.2、Node.js 24.19.0、Benchmark.js 2.1.4。
 
-多场景对比（Node 24，rfdc 开启 `circles` 对齐）：
+| 实现 | 每秒操作数 | 相对误差 | 采样轮次 |
+| --- | ---: | ---: | ---: |
+| `rfdc` 1.4.1（`circles: true`） | 1,010,403 | ±0.74% | 95 |
+| `dkopy` | 838,699 | ±0.70% | 93 |
+| `lodash.cloneDeep`（Lodash 4.18.1） | 358,975 | ±0.30% | 97 |
 
-| 场景 | dkopy | lodash.cloneDeep | rfdc |
-| --- | --- | --- | --- |
-| 原始类型 | ✅ 50.3M ops/sec | 46.3M | 49.8M |
-| 小对象（3 键平铺） | 9.4M | 4.3M | ✅ 20.7M |
-| 大数组（1 万个数字） | ✅ 23.5k | 3.0k | 9.6k |
-| 深嵌套（10 层） | 1.19M | 0.52M | ✅ 3.39M |
-| 特殊类型混合 | ✅ 1.52M | 0.36M | 1.44M |
-| 复杂对象+循环引用 | 1.25M | 0.36M | ✅ 1.26M |
-
-## 📈 性能优势
-
-* 复杂对象场景下，`dkopy` 的性能是 `lodash.cloneDeep` 的约 2.5 倍。
-* `dkopy` 在数组、特殊类型（`Date`/`Map`/`Set`/`TypedArray`）和原始类型场景领先 `rfdc`，复杂对象+循环引用场景已与 `rfdc` 基本持平。
-* `dkopy` 附带 `rfdc` 不具备的能力：保留类实例原型、克隆 `Symbol` 键与 `Map` 键。
+这组输入中，`dkopy` 的每秒操作数约为 `lodash.cloneDeep` 的 2.34 倍，低于 `rfdc` 约 17%。脚本也把创建测试对象和初始化 `rfdc` 的耗时计入结果；`rfdc` 在这组输入中不保留正则表达式类型，因此这不是功能等价的纯克隆对比。
 
 ## 🤝 贡献指南
 
@@ -131,11 +118,7 @@ dkopy(new User()).greet(); // ✅ 方法依然可用
 
 ### 发布新版本
 
-更新 `package.json`、`package-lock.json` 的版本号和 `CHANGELOG.md`，提交并推送后，为该提交创建并推送同版本的 Git 标签（例如 `v0.2.1`）。**推送标签就会触发 npm 发布**，不需要创建 GitHub Release。
-
-GitHub Actions 会核对标签和包版本，按锁文件安装依赖并构建，完成类型检查和测试后才发布。npm Trusted Publishing 允许 GitHub Actions 用自身身份换取短期发布凭据；在 npm 的 `dkopy` 设置中授权 `GoetheDady/dkopy` 的 `publish.yml` 即可，无需保存长期凭据。
-
-发布完成后，运行 `npm view dkopy version` 确认 npm 上的版本。
+推送版本标签会触发 npm 发布；确认新版可安装后，再用同一标签创建 GitHub Release，填写「版本号：一句话摘要」和更新说明。具体命令见 [发版指南](RELEASING.md)，历史改动见 [GitHub Releases](https://github.com/GoetheDady/dkopy/releases)。
 
 ## 📄 许可证
 

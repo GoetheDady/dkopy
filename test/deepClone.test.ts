@@ -398,6 +398,43 @@ describe('深克隆测试', () => {
     expect(Object.keys(cloned)).toEqual(['1']);
   });
 
+  test('数组保留原始值，并继续复用对象和函数的克隆记录', () => {
+    const marker = Symbol('marker');
+    const primitives = [-0, NaN, null, undefined, 'text', true, BigInt(1), marker];
+    const source = [...primitives, Math.abs, { marker }];
+    const clones = new Map<unknown, unknown>([[marker, Symbol('other')], [Math.abs, Math.floor]]);
+
+    const cloned = dkopy(source, clones);
+    expect(cloned.slice(0, primitives.length)).toStrictEqual(primitives);
+    expect(cloned[primitives.length]).toBe(Math.floor);
+    expect(cloned[primitives.length + 1]).toEqual({ marker });
+    expect(cloned[primitives.length + 1]).not.toBe(source[primitives.length + 1]);
+  });
+
+  test('数组深克隆自己的可枚举额外属性，不复制继承或不可枚举的额外属性', () => {
+    const symbol = Symbol('metadata');
+    const metadata = { count: 42 };
+    const source = Object.assign(new Array<typeof metadata>(3), { meta: metadata, '01': metadata, [symbol]: metadata });
+    source[1] = metadata;
+    Object.defineProperty(source, '2', { value: metadata });
+    Object.defineProperty(source, 'hidden', { value: metadata });
+    Object.setPrototypeOf(source, Object.assign(Object.create(Array.prototype), { 0: metadata, inherited: metadata }));
+
+    const cyclic = Object.assign(source, { self: source });
+    const cloned = dkopy(cyclic);
+    expect(cloned.meta).toEqual({ count: 42 });
+    expect(cloned.meta).not.toBe(metadata);
+    expect(cloned.self).toBe(cloned);
+    expect(cloned['01']).toBe(cloned.meta);
+    expect(cloned[symbol]).toBe(cloned.meta);
+    expect(cloned[1]).toBe(cloned.meta);
+    expect(cloned[2]).toBe(cloned.meta);
+    expect(cloned.length).toBe(3);
+    expect(0 in cloned).toBe(false);
+    expect('hidden' in cloned).toBe(false);
+    expect('inherited' in cloned).toBe(false);
+  });
+
   test('保留无原型对象和名为 __proto__ 的自有属性', () => {
     const dictionary = Object.assign(Object.create(null), { value: { count: 1 } });
     const ownProperty = { ['__proto__']: { count: 2 } };
@@ -497,6 +534,27 @@ describe('深克隆测试', () => {
     const cloned = dkopy(new Foo());
     expect(cloned).toBeInstanceOf(Foo);
     expect(cloned.greet()).toBe('hi');
+  });
+
+  test('类实例的自有属性不受原型上的同名属性影响', () => {
+    const metadata = Symbol('metadata');
+    class Example {
+      value = { count: 42 };
+      [metadata] = this.value;
+    }
+    const source = new Example();
+    Object.defineProperties(Example.prototype, {
+      value: { value: { count: 0 } },
+      [metadata]: { value: null },
+    });
+
+    const cloned = dkopy(source);
+    expect(Object.getPrototypeOf(cloned)).toBe(Example.prototype);
+    expect(Object.keys(cloned)).toEqual(['value']);
+    expect(Object.getOwnPropertySymbols(cloned)).toEqual([metadata]);
+    expect(cloned.value).toEqual({ count: 42 });
+    expect(cloned.value).not.toBe(source.value);
+    expect(cloned[metadata]).toBe(cloned.value);
   });
 
   test('Map 键克隆测试', () => {

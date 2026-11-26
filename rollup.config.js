@@ -1,8 +1,7 @@
-import typescript from '@rollup/plugin-typescript';
 import terser from '@rollup/plugin-terser';
 
 export default {
-  input: 'src/index.ts', // 入口文件
+  input: 'build/index.js',
   output: [
     {
       file: 'dist/index.cjs', // CommonJS 格式输出
@@ -15,7 +14,6 @@ export default {
     },
   ],
   plugins: [
-    typescript({ tsconfig: './tsconfig.build.json' }), // 只含 src，保证声明文件平铺在 dist/ 下
     terser({
       format: {
         comments: false, // 移除所有注释

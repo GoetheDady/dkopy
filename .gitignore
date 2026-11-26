@@ -14,7 +14,9 @@ coverage/
 
 # IDE and editor files
 .idea/
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 *.sublime-project
 *.sublime-workspace
 .project
