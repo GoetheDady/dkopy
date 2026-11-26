@@ -56,11 +56,14 @@ CommonJS（Node.js 中使用 `require` 加载模块的写法）：`const { dkopy
   - ✅ `Map`（键和值都会克隆）、`Set`（成员都会克隆）
   - ✅ `TypedArray`（如 `Uint8Array`、`Int32Array` 等）、`DataView`
   - ✅ `ArrayBuffer`、`SharedArrayBuffer` 和 Node.js `Buffer`（二进制数据的存储或访问类型；共享同一块内存的视图在克隆后仍共享同一个副本）
-  - ✅ 类实例（保留原型链，方法可用）
+  - ✅ 普通类实例（保留原型，仍可访问继承的方法）
 
 **属性复制规则：** 普通对象、数组和普通类实例都会复制自身可枚举的属性（可以被列出的属性，键可以是字符串或 `Symbol`），不把继承来的属性复制为自有属性。数组还会保留自有索引和空位，空位不会被填成 `undefined`。类实例的副本保留原型，但自己的属性不受原型上同名属性的限制。`Date`、`Map` 等内置对象的额外属性不在此范围内。
 
 **范围限制：** 函数、`Promise`、`WeakMap` 和 `Error` 等未支持的值会原样返回。克隆不会重建类的 `#` 私有字段或保留对象属性的完整配置；非常深的嵌套仍可能超出 JavaScript 的递归调用上限。
+
+- 继承内置类型的类不保证保留子类身份或新增方法，例如 `Date` 的子类会被克隆成普通 `Date`。
+- 可调整大小的 `ArrayBuffer` 和可增长的 `SharedArrayBuffer` 会按当前字节长度复制；副本长度固定，不能继续扩容。
 
 ## 🛠️ API
 
@@ -96,14 +99,14 @@ dkopy(new User()).greet(); // ✅ 方法依然可用
 
 ## ⚡️ 性能测试
 
-测试场景：克隆含循环引用的复杂对象。使用当前开发版本，运行 `npm run build && npm run benchmark` 可复测。
+测试场景：使用 `dkopy` 0.2.2 克隆含循环引用的复杂对象。复测请在源码仓库的 `v0.2.2` 标签下运行 `npm ci && npm run build && npm run benchmark`；npm 安装包不包含性能测试脚本。
 
 **测试环境（2026-11-26）：** Apple M4（ARM64）、macOS 26.6.2、Node.js 24.19.0、Benchmark.js 2.1.4。
 
 | 实现 | 每秒操作数 | 相对误差 | 采样轮次 |
 | --- | ---: | ---: | ---: |
 | `rfdc` 1.4.1（`circles: true`） | 1,010,403 | ±0.74% | 95 |
-| `dkopy` | 838,699 | ±0.70% | 93 |
+| `dkopy` 0.2.2 | 838,699 | ±0.70% | 93 |
 | `lodash.cloneDeep`（Lodash 4.18.1） | 358,975 | ±0.30% | 97 |
 
 这组输入中，`dkopy` 的每秒操作数约为 `lodash.cloneDeep` 的 2.34 倍，低于 `rfdc` 约 17%。脚本也把创建测试对象和初始化 `rfdc` 的耗时计入结果；`rfdc` 在这组输入中不保留正则表达式类型，因此这不是功能等价的纯克隆对比。
@@ -115,10 +118,6 @@ dkopy(new User()).greet(); // ✅ 方法依然可用
 3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 创建 Pull Request
-
-### 发布新版本
-
-推送版本标签会触发 npm 发布；确认新版可安装后，再用同一标签创建 GitHub Release，填写「版本号：一句话摘要」和更新说明。具体命令见 [发版指南](RELEASING.md)，历史改动见 [GitHub Releases](https://github.com/GoetheDady/dkopy/releases)。
 
 ## 📄 许可证
 

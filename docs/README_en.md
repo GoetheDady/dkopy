@@ -60,6 +60,9 @@ For CommonJS (the Node.js module format that uses `require`): `const { dkopy } =
 
 **Limits:** Unsupported values such as functions, `Promise`, `WeakMap`, and `Error` are returned unchanged. Cloning does not recreate `#` private fields or preserve full property descriptors (settings such as whether a property is writable). Extremely deep nesting can still exceed JavaScript's call stack limit.
 
+- Subclasses of built-in types may lose their subclass identity and methods. For example, a `Date` subclass is cloned as a plain `Date`.
+- Resizable `ArrayBuffer` and growable `SharedArrayBuffer` instances are copied at their current byte length. The copies are fixed-length and cannot grow.
+
 ## 🛠️ API
 
 ```ts
@@ -88,14 +91,14 @@ const cloned = dkopy(complex);
 
 ## ⚡️ Performance Tests
 
-Scenario: cloning a complex object with circular references. This measures the current development version. Run `npm run build && npm run benchmark` to reproduce it.
+Scenario: cloning a complex object with circular references using `dkopy` 0.2.2. To reproduce it, check out the `v0.2.2` tag in the source repository and run `npm ci && npm run build && npm run benchmark`. The npm package does not include the benchmark script.
 
 **Test environment (2026-11-26):** Apple M4 (ARM64), macOS 26.6.2, Node.js 24.19.0, Benchmark.js 2.1.4.
 
 | Implementation | Operations per second | Relative margin of error | Samples |
 | --- | ---: | ---: | ---: |
 | `rfdc` 1.4.1 (`circles: true`) | 1,010,403 | ±0.74% | 95 |
-| `dkopy` | 838,699 | ±0.70% | 93 |
+| `dkopy` 0.2.2 | 838,699 | ±0.70% | 93 |
 | `lodash.cloneDeep` (Lodash 4.18.1) | 358,975 | ±0.30% | 97 |
 
 On this input, `dkopy` completes about 2.34 times as many operations per second as `lodash.cloneDeep` and about 17% fewer than `rfdc`. The timings include creating the test object and initializing `rfdc`. Also, `rfdc` does not preserve the regular expression type on this input, so the results are not an equivalent comparison of cloning alone.
