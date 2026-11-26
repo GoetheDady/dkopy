@@ -1,20 +1,29 @@
 {
   "name": "dkopy",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A library for deep cloning objects",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    "import": "./dist/index.js",
-    "require": "./dist/index.cjs"
+    "import": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "require": {
+      "types": "./dist/index.d.cts",
+      "default": "./dist/index.cjs"
+    }
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "docs/README_en.md",
+    "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "rm -rf dist && rollup -c",
+    "build": "rm -rf dist && rollup -c && cp dist/index.d.ts dist/index.d.cts",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -50,19 +59,16 @@
     "fast"
   ],
   "devDependencies": {
-    "@rollup/plugin-terser": "^0.4.4",
-    "@rollup/plugin-typescript": "^12.3.0",
-    "@types/lodash": "^4.17.14",
-    "@types/node": "^24.13.3",
-    "@typescript-eslint/eslint-plugin": "^6.13.2",
-    "@typescript-eslint/parser": "^6.13.2",
+    "@rollup/plugin-terser": "^1.0.2",
+    "@rollup/plugin-typescript": "^12.3.1",
+    "@types/node": "^24.19.4",
+    "@vitest/coverage-v8": "^4.1.12",
     "benchmark": "^2.1.4",
     "lodash": "^4.18.1",
-    "lodash-es": "^4.17.21",
     "rfdc": "^1.4.1",
-    "rollup": "^4.6.1",
-    "tslib": "^2.6.2",
-    "typescript": "^5.3.2",
-    "vitest": "^4.1.11"
+    "rollup": "^4.68.8",
+    "tslib": "^2.9.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.12"
   }
 }

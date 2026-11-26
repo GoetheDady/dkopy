@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import dkopy from '../src/dkopy';
+import { dkopy } from '../src/index';
 
 describe('深克隆测试', () => {
   test('基础类型测试', () => {
@@ -338,25 +338,86 @@ describe('深克隆测试', () => {
   });
   
 
-  // test('DataView 测试', () => {
-  //   const buffer = new ArrayBuffer(8);
-  //   const dataView = new DataView(buffer);
-  //   dataView.setInt16(0, 256);
-  //   const cloned = dkopy(dataView);
-  //   expect(cloned).toEqual(dataView);
-  //   expect(cloned).not.toBe(dataView);
-  //   expect(cloned.getInt16(0)).toBe(dataView.getInt16(0));
-  // });
+  test('二进制视图保留偏移、长度及共享的缓冲区', () => {
+    const buffer = new ArrayBuffer(16);
+    const view = new DataView(buffer, 4, 2);
+    const bytes = new Uint8Array(buffer, 4, 4);
+    const nodeBuffer = Buffer.from(buffer, 4, 4);
+    bytes[0] = 42;
 
-  // test('Error 对象测试', () => {
-  //   const error = new Error('test error');
-  //   error.name = 'CustomError';
-  //   const cloned = dkopy(error);
-  //   expect(cloned).toEqual(error);
-  //   expect(cloned).not.toBe(error);
-  //   expect(cloned.message).toBe(error.message);
-  //   expect(cloned.name).toBe(error.name);
-  // });
+    const cloned = dkopy({ view, bytes, buffer, nodeBuffer });
+    expect(cloned.buffer).not.toBe(buffer);
+    expect(cloned.view.byteOffset).toBe(4);
+    expect(cloned.view.byteLength).toBe(2);
+    expect(cloned.bytes.byteOffset).toBe(4);
+    expect(cloned.bytes.length).toBe(4);
+    expect(cloned.view.buffer).toBe(cloned.buffer);
+    expect(cloned.bytes.buffer).toBe(cloned.buffer);
+    expect(cloned.nodeBuffer.buffer).toBe(cloned.buffer);
+    expect(cloned.view.getUint8(0)).toBe(42);
+
+    cloned.view.setUint8(0, 99);
+    expect(cloned.bytes[0]).toBe(99);
+    expect(cloned.nodeBuffer[0]).toBe(99);
+    expect(bytes[0]).toBe(42);
+    const bufferFirst = dkopy({ buffer, view });
+    expect(bufferFirst.view.buffer).toBe(bufferFirst.buffer);
+  });
+
+  test('重复出现的日期和正则表达式共用克隆，正则保留匹配位置', () => {
+    const date = new Date(123);
+    const regexp = /test/g;
+    regexp.lastIndex = 2;
+
+    const cloned = dkopy({ date, regexp, references: [date, regexp] });
+    expect(cloned.date).not.toBe(date);
+    expect(cloned.regexp).not.toBe(regexp);
+    expect(cloned.references[0]).toBe(cloned.date);
+    expect(cloned.references[1]).toBe(cloned.regexp);
+    expect(cloned.regexp.lastIndex).toBe(2);
+  });
+
+  test('共享内存缓冲区只克隆一次，副本与原始内存独立', () => {
+    const buffer = new SharedArrayBuffer(4);
+    const bytes = new Uint8Array(buffer);
+    bytes[0] = 42;
+
+    const cloned = dkopy({ bytes, buffer });
+    expect(cloned.buffer).not.toBe(buffer);
+    expect(cloned.bytes.buffer).toBe(cloned.buffer);
+    cloned.bytes[0] = 99;
+    expect(bytes[0]).toBe(42);
+  });
+
+  test('保留数组空位和显式的 undefined', () => {
+    const source = new Array<number | undefined>(3);
+    source[1] = undefined;
+
+    const cloned = dkopy(source);
+    expect(cloned.length).toBe(3);
+    expect(Object.keys(cloned)).toEqual(['1']);
+  });
+
+  test('保留无原型对象和名为 __proto__ 的自有属性', () => {
+    const dictionary = Object.assign(Object.create(null), { value: { count: 1 } });
+    const ownProperty = { ['__proto__']: { count: 2 } };
+
+    const cloned = dkopy({ dictionary, ownProperty });
+    expect(Object.getPrototypeOf(cloned.dictionary)).toBeNull();
+    expect(cloned.dictionary.value).not.toBe(dictionary.value);
+    expect(Object.getPrototypeOf(cloned.ownProperty)).toBe(Object.prototype);
+    expect(Object.keys(cloned.ownProperty)).toEqual(['__proto__']);
+    expect(cloned.ownProperty.__proto__).toEqual(ownProperty.__proto__);
+    expect(cloned.ownProperty.__proto__).not.toBe(ownProperty.__proto__);
+  });
+
+  test('未支持的对象沿用原始引用', () => {
+    const error = new Error('test error');
+    const pending = Promise.resolve(1);
+
+    expect(dkopy(error)).toBe(error);
+    expect(dkopy(pending)).toBe(pending);
+  });
 
   test('循环引用测试', () => {
     const obj: any = { a: 1 };

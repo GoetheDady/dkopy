@@ -2,17 +2,15 @@
 
 English | [简体中文](../README.md)
 
-A lightweight, high-performance JavaScript deep clone library with perfect support for complex objects and circular references!
+A lightweight JavaScript library that copies nested values while preserving circular and repeated references.
 
 ## ✨ Features
 
-- 🚀 **Ultimate Performance** - Optimized cloning algorithm outperforms similar tools
+- 🚀 **Lightweight Implementation** - Fast paths for common types
 - 🛡️ **Type Safe** - Full TypeScript support with type inference and code hints
 - 🔄 **Circular Reference Detection** - Smart handling of circular references
-- 🎨 **All Types Support** - Supports all JavaScript data types including `Date`, `RegExp`, `Set`, `Map`, `TypedArray`
+- 🎨 **Built-in Types** - Supports common types such as `Date`, `RegExp`, `Set`, `Map`, and binary data
 - 🧰 **Zero Dependencies** - Pure implementation with no external dependencies
-- 📦 **Tiny Size** - Only ~2KB after compression
-- 🔒 **Reliable** - Prevents recursive stack overflow with configurable max recursion depth
 
 ## 📦 Installation
 
@@ -30,28 +28,35 @@ pnpm add dkopy
 ## 🚀 Quick Start
 
 ```ts
-import dkopy from 'dkopy';
+import { dkopy } from 'dkopy';
 
 // 1️⃣ Basic deep clone
+const source = { nested: { value: 42 } };
 const cloned = dkopy(source);
 
 // 2️⃣ Handle circular references
 const circular = { foo: { bar: {} } };
 circular.foo.bar = circular;
-const cloned = dkopy(circular); // ✅ Correctly handles circular references
+const clonedCircular = dkopy(circular);
+console.log(clonedCircular.foo.bar === clonedCircular); // true
 ```
+
+For CommonJS (the Node.js module format that uses `require`): `const { dkopy } = require('dkopy');`
 
 ## 🎯 Supported Data Types
 
 - 💫 Primitive Types
-  - ✅ `String`, `Number`, `Boolean`
+  - ✅ `string`, `number`, `boolean`, `bigint`, `symbol`
   - ✅ `null`, `undefined`
 - 📋 Reference Types
   - ✅ `Object`, `Array`
   - ✅ `Date`, `RegExp`
-  - ✅ `Map`, `Set`
-  - ✅ `TypedArray` (e.g., `Uint8Array`, `Int32Array`, etc.)
-  - ✅ `ArrayBuffer`
+  - ✅ `Map` (keys and values), `Set` (members)
+  - ✅ `TypedArray` (e.g. `Uint8Array` and `Int32Array`) and `DataView`
+  - ✅ `ArrayBuffer`, `SharedArrayBuffer`, and Node.js `Buffer` (views of the same memory continue to share one cloned buffer)
+  - ✅ Ordinary class instances and enumerable `Symbol` properties
+
+**Limits:** Unsupported values such as functions, `Promise`, `WeakMap`, and `Error` are returned unchanged. Cloning does not recreate `#` private fields or preserve full property descriptors (settings such as whether a property is writable). Extremely deep nesting can still exceed JavaScript's call stack limit.
 
 ## 🛠️ API
 
